@@ -1,57 +1,49 @@
-name: Secure API Key Workflow
+name: Update Index HTML with Secure API
 
-# Controls when the workflow will run
 on:
-  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
     inputs:
       api-key:
         description: 'Google Sheets API Key'
-        required: false
+        required: true
 
-# A workflow run is made up of one or more jobs
 jobs:
-  # This workflow contains a single job called "update"
-  update:
-    # The type of runner that the job will run on
+  update-index:
     runs-on: ubuntu-latest
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-      # Runs a single command using the runners shell
-      - name: Update index.html with API Key
+      - name: Update index.html with secure API key
         env:
-          # Use the secret stored in GitHub Secrets or manually input
           GOOGLE_SHEETS_API_KEY: ${{ github.event.inputs.api-key || secrets.GOOGLE_SHEETS_API_KEY }}
-          GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
         run: |
-          # Create a script to update index.html
-          cat > update_index.sh << 'EOF'
+          # Ensure the script exists and is readable
+          if [ ! -f update_index.sh ]; then
+            echo "Creating update script"
+            cat > update_index.sh << 'EOF'
           #!/bin/bash
           
-          # Read the current index.html
-          content=$(cat index.html)
+          # Read the template index.html
+          template=$(cat index.html)
           
-          # Replace API key and Sheet ID placeholders
-          updated_content=$(echo "$content" | 
-            sed "s/YOUR_GOOGLE_SHEETS_API_KEY/$GOOGLE_SHEETS_API_KEY/g" |
-            sed "s/YOUR_GOOGLE_SHEET_ID/$GOOGLE_SHEET_ID/g")
+          # Replace placeholders with actual values
+          updated_html=$(echo "$template" | 
+            sed "s/YOUR_GOOGLE_SHEET_ID/$GOOGLE_SHEET_ID/g" |
+            sed "s/YOUR_GOOGLE_SHEETS_API_KEY/$GOOGLE_SHEETS_API_KEY/g")
           
-          # Write back to index.html
-          echo "$updated_content" > index.html
+          # Write the updated HTML
+          echo "$updated_html" > index.html
           EOF
+          
+            chmod +x update_index.sh
+          fi
 
-          # Make the script executable
-          chmod +x update_index.sh
-
-          # Run the update script
+          # Execute the update script
+          GOOGLE_SHEET_ID="${{ secrets.GOOGLE_SHEET_ID }}"
           ./update_index.sh
 
-      # Commit and push changes
-      - name: Commit updated file
+      - name: Commit changes
         run: |
           git config user.name github-actions
           git config user.email github-actions@github.com

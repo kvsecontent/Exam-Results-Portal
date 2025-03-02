@@ -1,52 +1,101 @@
-name: Update Index HTML with Secure API
+name: Secure API Key Workflow
 
 on:
   workflow_dispatch:
     inputs:
-      api-key:
-        description: 'Google Sheets API Key'
-        required: true
+      debug:
+        description: 'Enable debugging'
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   update-index:
     runs-on: ubuntu-latest
+    
     steps:
-      - name: Checkout repository
+      # Checkout the repository
+      - name: Checkout Repository
         uses: actions/checkout@v3
 
-      - name: Update index.html with secure API key
-        env:
-          GOOGLE_SHEETS_API_KEY: ${{ github.event.inputs.api-key || secrets.GOOGLE_SHEETS_API_KEY }}
+      # Debug: List repository contents
+      - name: List Repository Contents
+        if: ${{ inputs.debug == true }}
         run: |
-          # Ensure the script exists and is readable
-          if [ ! -f update_index.sh ]; then
-            echo "Creating update script"
-            cat > update_index.sh << 'EOF'
-          #!/bin/bash
-          
-          # Read the template index.html
-          template=$(cat index.html)
-          
-          # Replace placeholders with actual values
-          updated_html=$(echo "$template" | 
-            sed "s/YOUR_GOOGLE_SHEET_ID/$GOOGLE_SHEET_ID/g" |
-            sed "s/YOUR_GOOGLE_SHEETS_API_KEY/$GOOGLE_SHEETS_API_KEY/g")
-          
-          # Write the updated HTML
-          echo "$updated_html" > index.html
-          EOF
-          
-            chmod +x update_index.sh
+          pwd
+          ls -la
+          echo "Checking index.html exists:"
+          if [ -f index.html ]; then
+            echo "index.html found"
+          else
+            echo "index.html NOT FOUND"
           fi
 
-          # Execute the update script
-          GOOGLE_SHEET_ID="${{ secrets.GOOGLE_SHEET_ID }}"
+      # Prepare update script
+      - name: Prepare Update Script
+        run: |
+          cat > update_index.sh << 'EOF'
+          #!/bin/bash
+          set -e  # Exit immediately if a command exits with a non-zero status
+
+          # Check if index.html exists
+          if [ ! -f index.html ]; then
+            echo "Error: index.html not found"
+            exit 1
+          fi
+
+          # Validate environment variables
+          if [ -z "$GOOGLE_SHEETS_API_KEY" ]; then
+            echo "Error: GOOGLE_SHEETS_API_KEY is not set"
+            exit 1
+          fi
+
+          if [ -z "$GOOGLE_SHEET_ID" ]; then
+            echo "Error: GOOGLE_SHEET_ID is not set"
+            exit 1
+          fi
+
+          # Read the current index.html
+          content=$(cat index.html)
+          
+          # Replace API key and Sheet ID placeholders
+          updated_content=$(echo "$content" | 
+            sed "s/YOUR_GOOGLE_SHEETS_API_KEY/$GOOGLE_SHEETS_API_KEY/g" |
+            sed "s/YOUR_GOOGLE_SHEET_ID/$GOOGLE_SHEET_ID/g")
+          
+          # Write back to index.html
+          echo "$updated_content" > index.html
+
+          # Verify replacements were made
+          if grep -q "YOUR_GOOGLE_SHEETS_API_KEY\|YOUR_GOOGLE_SHEET_ID" index.html; then
+            echo "Error: Placeholders were not fully replaced"
+            exit 1
+          fi
+          EOF
+
+          # Make the script executable
+          chmod +x update_index.sh
+
+      # Run update script
+      - name: Update index.html
+        env:
+          GOOGLE_SHEETS_API_KEY: ${{ secrets.GOOGLE_SHEETS_API_KEY }}
+          GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
+        run: |
           ./update_index.sh
 
-      - name: Commit changes
+      # Commit and push changes
+      - name: Commit Updated File
         run: |
-          git config user.name github-actions
-          git config user.email github-actions@github.com
+          git config user.name "GitHub Actions Bot"
+          git config user.email "<>"
+          
+          # Check if there are changes
+          if git diff --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          
           git add index.html
           git commit -m "Update index.html with secure API configuration"
           git push

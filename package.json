@@ -1,0 +1,9 @@
+# Create project directory
+mkdir exam-results-backend
+cd exam-results-backend
+
+# Initialize Node.js project
+npm init -y
+
+# Install dependencies
+npm install express cors axios dotenv

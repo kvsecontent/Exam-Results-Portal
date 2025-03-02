@@ -1,0 +1,60 @@
+name: Secure API Key Workflow
+
+# Controls when the workflow will run
+on:
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+    inputs:
+      api-key:
+        description: 'Google Sheets API Key'
+        required: false
+
+# A workflow run is made up of one or more jobs
+jobs:
+  # This workflow contains a single job called "update"
+  update:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v3
+
+      # Runs a single command using the runners shell
+      - name: Update index.html with API Key
+        env:
+          # Use the secret stored in GitHub Secrets or manually input
+          GOOGLE_SHEETS_API_KEY: ${{ github.event.inputs.api-key || secrets.GOOGLE_SHEETS_API_KEY }}
+          GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
+        run: |
+          # Create a script to update index.html
+          cat > update_index.sh << 'EOF'
+          #!/bin/bash
+          
+          # Read the current index.html
+          content=$(cat index.html)
+          
+          # Replace API key and Sheet ID placeholders
+          updated_content=$(echo "$content" | 
+            sed "s/YOUR_GOOGLE_SHEETS_API_KEY/$GOOGLE_SHEETS_API_KEY/g" |
+            sed "s/YOUR_GOOGLE_SHEET_ID/$GOOGLE_SHEET_ID/g")
+          
+          # Write back to index.html
+          echo "$updated_content" > index.html
+          EOF
+
+          # Make the script executable
+          chmod +x update_index.sh
+
+          # Run the update script
+          ./update_index.sh
+
+      # Commit and push changes
+      - name: Commit updated file
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add index.html
+          git commit -m "Update index.html with secure API configuration"
+          git push

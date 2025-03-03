@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Exam Results Portal</title>
     <style>
+        /* CSS styles remain unchanged */
         body {
             font-family: 'Arial', sans-serif;
             background-color: #f5f5f5;
@@ -133,28 +134,7 @@
         
         .subjects-table th, .subjects-table td {
             border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-        }
-        
-        .subjects-table th {
-            background-color: #f5f5f5;
-        }
-        
-        .subjects-table th:nth-child(1),
-        .subjects-table th:nth-child(2),
-        .subjects-table td:nth-child(2),
-        .subjects-table th:nth-child(3),
-        .subjects-table td:nth-child(3),
-        .subjects-table th:nth-child(4),
-        .subjects-table td:nth-child(4) {
-            text-align: center;
-        }
-        
-        .grade-A, .grade-A\+ { color: #4CAF50; font-weight: bold; }
-        .grade-B, .grade-B\+ { color: #2196F3; font-weight: bold; }
-        .grade-C, .grade-C\+ { color: #FF9800; font-weight: bold; }
-        .grade-D, .grade-D\+ { color: #FF9800; font-weight: bold; }
+            padding:.grade-D\+ { color: #FF9800; font-weight: bold; }
         .grade-E { color: #FF7043; font-weight: bold; }
         .grade-F { color: #F44336; font-weight: bold; }
         
@@ -165,6 +145,7 @@
             margin-bottom: 15px;
         }
         
+        /* Rest of the CSS styles... */
         .total-section, .result-section {
             flex: 1;
             min-width: 200px;
@@ -190,6 +171,7 @@
             font-weight: bold;
         }
         
+        /* More CSS styles... */
         .signature-section {
             display: flex;
             flex-wrap: wrap;
@@ -242,6 +224,7 @@
             margin: 0 auto;
         }
         
+        /* Media queries for responsive design */
         @media (max-width: 600px) {
             .container {
                 padding: 0;
@@ -277,6 +260,7 @@
             }
         }
         
+        /* Print styles */
         @media print {
             body * {
                 visibility: hidden;
@@ -434,129 +418,23 @@
     </div>
 
     <script>
-        // Replace with your Google Sheet ID and API key
-        const SHEET_ID = '116NbAamZahJdmH04jV4ZahzedoW6eliZqKl0Q6tLvv4'; // The ID you copied from the URL
-        const API_KEY = 'AIzaSyCNqaTLpfOIVBOyjIiWDsET5N4CU-16qCA'; // The API key you created
+        // Replace with your backend API URL
+        const API_BASE_URL = 'https://your-render-backend-url.onrender.com'; // You'll update this after deployment
 
-        async function fetchDataFromGoogleSheets(rollNumber) {
-            const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Sheet1?key=${API_KEY}`;
-            
+        async function fetchDataFromBackend(rollNumber) {
             try {
+                const url = `${API_BASE_URL}/api/student/${rollNumber}`;
                 const response = await fetch(url);
-                const data = await response.json();
+                const result = await response.json();
                 
-                // Process the data to find the student
-                const rows = data.values;
-                const headers = rows[0]; // First row contains headers
-                
-                // Find the indexes of important columns
-                const rollIndex = headers.indexOf('Roll_Number');
-                const nameIndex = headers.indexOf('Name');
-                const classIndex = headers.indexOf('Class');
-                const schoolIndex = headers.indexOf('School');
-                const examInchargeSignatureIndex = headers.indexOf('ExamInchargeSignature');
-                const totalMarksIndex = headers.indexOf('Total_Marks');
-                const totalObtainedIndex = headers.indexOf('Total_Obtained');
-                const percentageIndex = headers.indexOf('Percentage');
-                const cgpaIndex = headers.indexOf('CGPA');
-                const resultIndex = headers.indexOf('Result');
-                
-                // Add exam name index
-                const examNameIndex = headers.indexOf('Exam_Name');
-                
-                // New indexes for added fields
-                const dobIndex = headers.indexOf('DOB');
-                const fatherNameIndex = headers.indexOf('Father_Name');
-                const motherNameIndex = headers.indexOf('Mother_Name');
-                
-                // Find subject columns (they should be between Class and Total_Marks)
-                const subjectColumns = [];
-                for (let i = classIndex + 1; i < totalMarksIndex; i++) {
-                    if (headers[i] && !headers[i].includes('_Grade') && !headers[i].includes('_Max')) {
-                        // Check if there's a corresponding grade column
-                        const gradeColumnName = `${headers[i]}_Grade`;
-                        const gradeIndex = headers.indexOf(gradeColumnName);
-                        
-                        // Check if there's a corresponding max marks column
-                        const maxMarksColumnName = `${headers[i]}_Max`;
-                        const maxMarksIndex = headers.indexOf(maxMarksColumnName);
-                        
-                        subjectColumns.push({ 
-                            index: i, 
-                            name: headers[i],
-                            gradeIndex: gradeIndex !== -1 ? gradeIndex : -1,
-                            maxMarksIndex: maxMarksIndex !== -1 ? maxMarksIndex : -1
-                        });
-                    }
-                }
-                
-                // Look for the student with matching roll number
-                for (let i = 1; i < rows.length; i++) {
-                    if (rows[i][rollIndex] === rollNumber) {
-                        // Found the student, now format the data
-                        const studentData = {
-                            name: rows[i][nameIndex],
-                            class: rows[i][classIndex],
-                            school: schoolIndex !== -1 ? rows[i][schoolIndex] : 'PM SHRI KENDRIYA VIDYALAYA RAEBARELI',
-                            examInchargeSignature: examInchargeSignatureIndex !== -1 ? rows[i][examInchargeSignatureIndex] : 'Exam Incharge.png',
-                            totalMarks: parseInt(rows[i][totalMarksIndex]),
-                            totalObtained: parseInt(rows[i][totalObtainedIndex]),
-                            percentage: parseFloat(rows[i][percentageIndex]),
-                            cgpa: rows[i][cgpaIndex], // Keep as string to allow text remarks
-                            result: rows[i][resultIndex],
-                            // Get exam name from sheet with 'Final Term' as fallback
-                            examName: examNameIndex !== -1 && rows[i][examNameIndex] ? rows[i][examNameIndex] : 'Final Term',
-                            // New fields
-                            dob: dobIndex !== -1 ? rows[i][dobIndex] : 'Not Available',
-                            fatherName: fatherNameIndex !== -1 ? rows[i][fatherNameIndex] : 'Not Available',
-                            motherName: motherNameIndex !== -1 ? rows[i][motherNameIndex] : 'Not Available',
-                            subjects: []
-                        };
-                        
-                        // Process subject marks
-                        subjectColumns.forEach(subject => {
-                            const marks = parseInt(rows[i][subject.index]);
-                            let grade;
-                            let maxMarks = 100; // Default max marks
-                            
-                            // Get grade from Google Sheets if available
-                            if (subject.gradeIndex !== -1 && rows[i][subject.gradeIndex]) {
-                                grade = rows[i][subject.gradeIndex];
-                            } else {
-                                // Fallback to calculating grade
-                                grade = calculateGrade(marks);
-                            }
-                            
-                            // Get max marks from Google Sheets if available
-                            if (subject.maxMarksIndex !== -1 && rows[i][subject.maxMarksIndex]) {
-                                maxMarks = parseInt(rows[i][subject.maxMarksIndex]);
-                            }
-                            
-                            studentData.subjects.push({
-                                name: subject.name,
-                                maxMarks: maxMarks,
-                                obtained: marks,
-                                grade: grade
-                            });
-                        });
-                        
-                        return studentData;
-                    }
+                if (result.success) {
+                    return result.data;
                 }
                 return null; // Student not found
             } catch (error) {
                 console.error('Error fetching data:', error);
                 return null;
             }
-        }
-
-        function calculateGrade(marks) {
-            if (marks >= 90) return 'A';
-            else if (marks >= 80) return 'B';
-            else if (marks >= 70) return 'C';
-            else if (marks >= 60) return 'D';
-            else if (marks >= 50) return 'E';
-            else return 'F';
         }
 
         function getGradeClass(grade) {
@@ -573,14 +451,14 @@
             document.getElementById('studentClass').textContent = data.class;
             document.getElementById('examYear').textContent = "2024-25";
             document.getElementById('schoolName').textContent = data.school;
-            document.getElementById('examName').textContent = data.examName; // Use the exam name from Google Sheets
+            document.getElementById('examName').textContent = data.examName;
             
             // Set new fields
             document.getElementById('studentDOB').textContent = data.dob;
             document.getElementById('fatherName').textContent = data.fatherName;
             document.getElementById('motherName').textContent = data.motherName;
             
-            // Handle the signature image - improved version with pre-checking
+            // Handle the signature image
             const signatureImg = document.getElementById('examInchargeSignature');
             
             // Function to check if image exists and display it
@@ -679,8 +557,8 @@
                 return;
             }
             
-            // Fetch data from Google Sheets
-            fetchDataFromGoogleSheets(rollNumber).then(data => {
+            // Fetch data from backend
+            fetchDataFromBackend(rollNumber).then(data => {
                 if (data) {
                     displayResult(data, rollNumber);
                     resultCard.style.display = 'block';

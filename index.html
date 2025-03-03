@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exam Results Portal</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            border: 2px solid #3f51b5;
+        }
+        
+        .header {
+            background-color: #3f51b5;
+            color: white;
+            padding: 15px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        
+        .search-section {
+            padding: 15px;
+            text-align: center;
+            border-bottom: 1px solid #eee;
+        }
+        
+        input[type="text"] {
+            padding: 10px;
+            width: 200px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        
+        button {
+            padding: 10px 20px;
+            background-color: #3f51b5;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-left: 10px;
+        }
+        
+        button:hover {
+            background-color: #303f9f;
+        }
+        
+        .result-card {
+            display: none;
+            padding: 15px;
+        }
+        
+        .school-info {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        
+        .school-logo {
+            width: 100px;
+            height: 80px;
+            margin: 0 auto;
+            border-radius: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: transparent;
+        }
+        
+        .school-info h2 {
+            margin: 10px 0 5px;
+            font-size: 18px;
+        }
+        
+        .student-info {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            border: 1px solid #eee;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        
+        .student-info-item {
+            flex: 1;
+            min-width: 250px;
+        }
+        
+        .student-info p {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+        
+        .text-right {
+            text-align: right;
+        }
+        
+        .exam-info {
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        
+        .exam-info p {
+            margin: 5px 0;
+        }
+        
+        .subjects-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+        
+        .subjects-table th, .subjects-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        
+        .subjects-table th {
+            background-color: #f5f5f5;
+        }
+        
+        .subjects-table th:nth-child(1),
+        .subjects-table th:nth-child(2),
+        .subjects-table td:nth-child(2),
+        .subjects-table th:nth-child(3),
+        .subjects-table td:nth-child(3),
+        .subjects-table th:nth-child(4),
+        .subjects-table td:nth-child(4) {
+            text-align: center;
+        }
+        
+        .grade-A, .grade-A\+ { color: #4CAF50; font-weight: bold; }
+        .grade-B, .grade-B\+ { color: #2196F3; font-weight: bold; }
+        .grade-C, .grade-C\+ { color: #FF9800; font-weight: bold; }
+        .grade-D, .grade-D\+ { color: #FF9800; font-weight: bold; }
+        .grade-E { color: #FF7043; font-weight: bold; }
+        .grade-F { color: #F44336; font-weight: bold; }
+        
+        .summary {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+        
+        .total-section, .result-section {
+            flex: 1;
+            min-width: 200px;
+            padding: 10px;
+            border: 1px solid #eee;
+            border-radius: 5px;
+            margin: 5px;
+        }
+        
+        .result-section {
+            text-align: center;
+        }
+        
+        .pass {
+            color: #4CAF50;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        
+        .fail {
+            color: #F44336;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        
+        .signature-section {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+        
+        .signature {
+            flex: 1;
+            min-width: 150px;
+            text-align: center;
+            padding: 0 10px;
+        }
+        
+        .signature-image {
+            max-width: 120px;
+            height: 50px;
+            margin: 5px auto;
+            display: block;
+        }
+        
+        .error-message {
+            color: #F44336;
+            text-align: center;
+            padding: 15px;
+            display: none;
+        }
+        
+        .print-button {
+            text-align: center;
+            margin: 15px 0;
+        }
+        
+        .disclaimer {
+            text-align: center;
+            margin: 30px auto 15px;
+            font-size: 12px;
+            color: #666;
+            border-top: 1px solid #eee;
+            padding-top: 10px;
+            max-width: 90%;
+            font-family: 'Times New Roman', Times, serif;
+            position: relative;
+            clear: both;
+            display: block;
+        }
+        
+        .disclaimer p {
+            text-align: center;
+            margin: 0 auto;
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                padding: 0;
+                border-radius: 0;
+            }
+            
+            .header h1 {
+                font-size: 20px;
+            }
+            
+            .student-info-item {
+                min-width: 100%;
+                margin-bottom: 10px;
+            }
+            
+            .student-info p strong {
+                width: 150px;
+            }
+            
+            .signature {
+                min-width: 100%;
+                margin-bottom: 15px;
+            }
+            
+            input[type="text"] {
+                width: 100%;
+                margin-bottom: 10px;
+            }
+            
+            button {
+                width: 100%;
+                margin-left: 0;
+            }
+        }
+        
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            
+            .result-card, .result-card * {
+                visibility: visible;
+            }
+            
+            .result-card {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                border: 2px solid #3f51b5 !important;
+                padding: 15px !important;
+                box-sizing: border-box !important;
+                background-color: white !important;
+            }
+            
+            .student-info {
+                border: 1px solid #000 !important;
+            }
+            
+            .subjects-table th, .subjects-table td {
+                border: 1px solid #000 !important;
+            }
+            
+            .total-section, .result-section {
+                border: 1px solid #000 !important;
+            }
+            
+            .print-button {
+                display: none !important;
+            }
+            
+            .grade-A, .grade-A\+ { color: #4CAF50 !important; }
+            .grade-B, .grade-B\+ { color: #2196F3 !important; }
+            .grade-C, .grade-C\+ { color: #FF9800 !important; }
+            .grade-D, .grade-D\+ { color: #FF9800 !important; }
+            .grade-E { color: #FF7043 !important; }
+            .grade-F { color: #F44336 !important; }
+            
+            .disclaimer {
+                position: relative !important;
+                visibility: visible !important;
+                display: block !important;
+                margin: 30px auto 15px !important;
+                text-align: center !important;
+                font-family: 'Times New Roman', Times, serif !important;
+                width: 90% !important;
+            }
+            
+            .disclaimer p {
+                text-align: center !important;
+                margin: 0 auto !important;
+                width: 100% !important;
+            }
+            
+            .pass { color: #4CAF50 !important; }
+            .fail { color: #F44336 !important; }
+            
+            @page {
+                size: A4 portrait;
+                margin: 10mm;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Exam Results Portal</h1>
+        </div>
+        
+        <div class="search-section">
+            <input type="text" id="rollNumber" placeholder="Enter 5 Digits Admission No.">
+            <button onclick="fetchResult()">Get Result</button>
+        </div>
+        
+        <div class="error-message" id="errorMessage">
+            Student record not found. Please check the Enrollment number and try again.
+        </div>
+        
+        <div class="result-card" id="resultCard">
+            <div class="school-info">
+                <div class="school-logo">
+                    <img src="https://i.imgur.com/GxoHln6.jpeg" alt="KVS" style="width: 100%; height: 100%; object-fit: contain;">
+                </div>
+                <h2 id="schoolName">School Name</h2>
+                <p>Examination Results <span id="examYear"></span></p>
+            </div>
+            
+            <div class="student-info">
+                <div class="student-info-item">
+                    <p><strong>Name:</strong> <span id="studentName">John Doe</span></p>
+                    <p><strong>Enrollment No:</strong> <span id="studentRoll">12345</span></p>
+                    <p><strong>Date of Birth:</strong> <span id="studentDOB">01/01/2010</span></p>
+                </div>
+                <div class="student-info-item text-right">
+                    <p><strong>Class:</strong> <span id="studentClass">X-A</span></p>
+                    <p><strong>Father's Name:</strong> <span id="fatherName">Mr. John Doe Sr.</span></p>
+                    <p><strong>Mother's Name:</strong> <span id="motherName">Mrs. Jane Doe</span></p>
+                </div>
+            </div>
+            
+            <div class="exam-info">
+                <p><strong>Exam:</strong> <span id="examName">Final Term</span></p>
+            </div>
+            
+            <table class="subjects-table">
+                <thead>
+                    <tr>
+                        <th>Subject</th>
+                        <th>Max Marks</th>
+                        <th>Marks Obtained</th>
+                        <th>Grade</th>
+                    </tr>
+                </thead>
+                <tbody id="marksTableBody">
+                    <!-- Subject marks will be inserted here -->
+                </tbody>
+            </table>
+            
+            <div class="summary">
+                <div class="total-section">
+                    <p><strong>Total Marks:</strong> <span id="totalObtained">0</span>/<span id="totalMax">0</span></p>
+                    <p><strong>Percentage:</strong> <span id="percentage">0</span>%</p>
+                    <p><strong>Remark:</strong> <span id="cgpa">0.0</span></p>
+                </div>
+                <div class="result-section">
+                    <p><strong>Result</strong></p>
+                    <p id="resultStatus" class="pass">PASS</p>
+                </div>
+            </div>
+            
+            <div class="signature-section">
+                <div class="signature" style="visibility: hidden">
+                    <!-- Empty space where Class Teacher was -->
+                </div>
+                <div class="signature">
+                    <img id="examInchargeSignature" src="" alt="Exam Incharge Signature" class="signature-image" style="display: none;">
+                    <p>Exam I/C</p>
+                </div>
+            </div>
+            
+            <div class="disclaimer">
+                <p style="text-align: center;"><strong>Disclaimer:</strong> kvsecontent is not responsible for any errors in the online results. These are for immediate reference only and not official mark sheets. Original mark sheets are issued separately by the Vidyalaya.</p>
+            </div>
+            
+            <div class="print-button">
+                <button onclick="window.print()" style="background-color: #4CAF50;">Print Result</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Replace with your Google Sheet ID and API key
+        const SHEET_ID = '116NbAamZahJdmH04jV4ZahzedoW6eliZqKl0Q6tLvv4'; // The ID you copied from the URL
+        const API_KEY = 'AIzaSyCNqaTLpfOIVBOyjIiWDsET5N4CU-16qCA'; // The API key you created
+
+        async function fetchDataFromGoogleSheets(rollNumber) {
+            const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Sheet1?key=${API_KEY}`;
+            
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                // Process the data to find the student
+                const rows = data.values;
+                const headers = rows[0]; // First row contains headers
+                
+                // Find the indexes of important columns
+                const rollIndex = headers.indexOf('Roll_Number');
+                const nameIndex = headers.indexOf('Name');
+                const classIndex = headers.indexOf('Class');
+                const schoolIndex = headers.indexOf('School');
+                const examInchargeSignatureIndex = headers.indexOf('ExamInchargeSignature');
+                const totalMarksIndex = headers.indexOf('Total_Marks');
+                const totalObtainedIndex = headers.indexOf('Total_Obtained');
+                const percentageIndex = headers.indexOf('Percentage');
+                const cgpaIndex = headers.indexOf('CGPA');
+                const resultIndex = headers.indexOf('Result');
+                
+                // Add exam name index
+                const examNameIndex = headers.indexOf('Exam_Name');
+                
+                // New indexes for added fields
+                const dobIndex = headers.indexOf('DOB');
+                const fatherNameIndex = headers.indexOf('Father_Name');
+                const motherNameIndex = headers.indexOf('Mother_Name');
+                
+                // Find subject columns (they should be between Class and Total_Marks)
+                const subjectColumns = [];
+                for (let i = classIndex + 1; i < totalMarksIndex; i++) {
+                    if (headers[i] && !headers[i].includes('_Grade') && !headers[i].includes('_Max')) {
+                        // Check if there's a corresponding grade column
+                        const gradeColumnName = `${headers[i]}_Grade`;
+                        const gradeIndex = headers.indexOf(gradeColumnName);
+                        
+                        // Check if there's a corresponding max marks column
+                        const maxMarksColumnName = `${headers[i]}_Max`;
+                        const maxMarksIndex = headers.indexOf(maxMarksColumnName);
+                        
+                        subjectColumns.push({ 
+                            index: i, 
+                            name: headers[i],
+                            gradeIndex: gradeIndex !== -1 ? gradeIndex : -1,
+                            maxMarksIndex: maxMarksIndex !== -1 ? maxMarksIndex : -1
+                        });
+                    }
+                }
+                
+                // Look for the student with matching roll number
+                for (let i = 1; i < rows.length; i++) {
+                    if (rows[i][rollIndex] === rollNumber) {
+                        // Found the student, now format the data
+                        const studentData = {
+                            name: rows[i][nameIndex],
+                            class: rows[i][classIndex],
+                            school: schoolIndex !== -1 ? rows[i][schoolIndex] : 'PM SHRI KENDRIYA VIDYALAYA RAEBARELI',
+                            examInchargeSignature: examInchargeSignatureIndex !== -1 ? rows[i][examInchargeSignatureIndex] : 'Exam Incharge.png',
+                            totalMarks: parseInt(rows[i][totalMarksIndex]),
+                            totalObtained: parseInt(rows[i][totalObtainedIndex]),
+                            percentage: parseFloat(rows[i][percentageIndex]),
+                            cgpa: rows[i][cgpaIndex], // Keep as string to allow text remarks
+                            result: rows[i][resultIndex],
+                            // Get exam name from sheet with 'Final Term' as fallback
+                            examName: examNameIndex !== -1 && rows[i][examNameIndex] ? rows[i][examNameIndex] : 'Final Term',
+                            // New fields
+                            dob: dobIndex !== -1 ? rows[i][dobIndex] : 'Not Available',
+                            fatherName: fatherNameIndex !== -1 ? rows[i][fatherNameIndex] : 'Not Available',
+                            motherName: motherNameIndex !== -1 ? rows[i][motherNameIndex] : 'Not Available',
+                            subjects: []
+                        };
+                        
+                        // Process subject marks
+                        subjectColumns.forEach(subject => {
+                            const marks = parseInt(rows[i][subject.index]);
+                            let grade;
+                            let maxMarks = 100; // Default max marks
+                            
+                            // Get grade from Google Sheets if available
+                            if (subject.gradeIndex !== -1 && rows[i][subject.gradeIndex]) {
+                                grade = rows[i][subject.gradeIndex];
+                            } else {
+                                // Fallback to calculating grade
+                                grade = calculateGrade(marks);
+                            }
+                            
+                            // Get max marks from Google Sheets if available
+                            if (subject.maxMarksIndex !== -1 && rows[i][subject.maxMarksIndex]) {
+                                maxMarks = parseInt(rows[i][subject.maxMarksIndex]);
+                            }
+                            
+                            studentData.subjects.push({
+                                name: subject.name,
+                                maxMarks: maxMarks,
+                                obtained: marks,
+                                grade: grade
+                            });
+                        });
+                        
+                        return studentData;
+                    }
+                }
+                return null; // Student not found
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                return null;
+            }
+        }
+
+        function calculateGrade(marks) {
+            if (marks >= 90) return 'A';
+            else if (marks >= 80) return 'B';
+            else if (marks >= 70) return 'C';
+            else if (marks >= 60) return 'D';
+            else if (marks >= 50) return 'E';
+            else return 'F';
+        }
+
+        function getGradeClass(grade) {
+            // Extract the base grade letter (A, B, C, D, E, F) from the grade
+            // This handles grades with + symbols like A+, B+, etc.
+            const baseGrade = grade.charAt(0);
+            return `grade-${baseGrade}`;
+        }
+
+        function displayResult(data, rollNumber) {
+            // Set student info
+            document.getElementById('studentName').textContent = data.name;
+            document.getElementById('studentRoll').textContent = rollNumber;
+            document.getElementById('studentClass').textContent = data.class;
+            document.getElementById('examYear').textContent = "2024-25";
+            document.getElementById('schoolName').textContent = data.school;
+            document.getElementById('examName').textContent = data.examName; // Use the exam name from Google Sheets
+            
+            // Set new fields
+            document.getElementById('studentDOB').textContent = data.dob;
+            document.getElementById('fatherName').textContent = data.fatherName;
+            document.getElementById('motherName').textContent = data.motherName;
+            
+            // Handle the signature image - improved version with pre-checking
+            const signatureImg = document.getElementById('examInchargeSignature');
+            
+            // Function to check if image exists and display it
+            function checkAndDisplayImage(imgSrc) {
+                return new Promise((resolve) => {
+                    const tempImg = new Image();
+                    tempImg.onload = function() {
+                        signatureImg.src = imgSrc;
+                        signatureImg.style.display = 'block';
+                        resolve(true);
+                    };
+                    tempImg.onerror = function() {
+                        resolve(false);
+                    };
+                    tempImg.src = imgSrc;
+                });
+            }
+            
+            // Try to load the custom signature or default signature
+            async function handleSignature() {
+                // Check if we have a custom signature
+                if (data.examInchargeSignature && 
+                    data.examInchargeSignature.trim() !== '' && 
+                    data.examInchargeSignature !== 'Exam Incharge.png') {
+                    
+                    // Try the custom signature
+                    const customSignatureWorks = await checkAndDisplayImage(data.examInchargeSignature);
+                    if (customSignatureWorks) return;
+                }
+                
+                // Try the default signature
+                const defaultSignatureWorks = await checkAndDisplayImage('Exam Incharge.png');
+                if (!defaultSignatureWorks) {
+                    // If neither signature works, hide the image
+                    signatureImg.style.display = 'none';
+                }
+            }
+            
+            // Call the function to handle signatures
+            handleSignature();
+            
+            // Clear previous table rows
+            const tableBody = document.getElementById('marksTableBody');
+            tableBody.innerHTML = '';
+            
+            // Add subject rows
+            data.subjects.forEach(subject => {
+                const row = document.createElement('tr');
+                
+                const nameCell = document.createElement('td');
+                nameCell.textContent = subject.name;
+                
+                const maxMarksCell = document.createElement('td');
+                maxMarksCell.textContent = subject.maxMarks;
+                
+                const obtainedCell = document.createElement('td');
+                obtainedCell.textContent = subject.obtained;
+                
+                const gradeCell = document.createElement('td');
+                gradeCell.textContent = subject.grade;
+                gradeCell.className = getGradeClass(subject.grade);
+                
+                row.appendChild(nameCell);
+                row.appendChild(maxMarksCell);
+                row.appendChild(obtainedCell);
+                row.appendChild(gradeCell);
+                
+                tableBody.appendChild(row);
+            });
+            
+            // Set summary information
+            document.getElementById('totalObtained').textContent = data.totalObtained;
+            document.getElementById('totalMax').textContent = data.totalMarks;
+            document.getElementById('percentage').textContent = data.percentage;
+            document.getElementById('cgpa').textContent = data.cgpa;
+            
+            // Set result
+            const resultStatus = document.getElementById('resultStatus');
+            resultStatus.textContent = data.result;
+            resultStatus.className = data.result === 'PASS' ? 'pass' : 'fail';
+        }
+
+        function fetchResult() {
+            const rollNumber = document.getElementById('rollNumber').value;
+            const resultCard = document.getElementById('resultCard');
+            const errorMessage = document.getElementById('errorMessage');
+            
+            // Reset display
+            resultCard.style.display = 'none';
+            errorMessage.style.display = 'none';
+            
+            // Validate input
+            if (!rollNumber.trim()) {
+                errorMessage.textContent = "Please enter an admission number";
+                errorMessage.style.display = 'block';
+                return;
+            }
+            
+            // Fetch data from Google Sheets
+            fetchDataFromGoogleSheets(rollNumber).then(data => {
+                if (data) {
+                    displayResult(data, rollNumber);
+                    resultCard.style.display = 'block';
+                } else {
+                    errorMessage.style.display = 'block';
+                }
+            });
+        }
+        
+        // Add event listener for Enter key on roll number input
+        document.getElementById('rollNumber').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                fetchResult();
+            }
+        });
+    </script>
+</body>
+</html>

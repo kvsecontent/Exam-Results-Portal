@@ -9,7 +9,7 @@ const PORT = process.env.PORT || 3000;
 // CORS Configuration
 app.use(cors({
     origin: [
-        'https://kvsecontent.github.io/Exam-Results-Portal/', // Your GitHub Pages URL
+        'https://kvsecontent.github.io', // GitHub Pages domain (without trailing slash)
         'http://localhost:5500' // For local testing
     ],
     methods: ['GET'],

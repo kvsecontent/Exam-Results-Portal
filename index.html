@@ -270,8 +270,67 @@
     </div>
 
     <script>
-        // Backend proxy URL
-        const BACKEND_PROXY_URL = 'https://exam-results-portal-backend.onrender.com/api/exam-results';
+        // Backend proxy URLs - we'll try direct access first, then fallback to the proxy
+        const BACKEND_DIRECT_URL = 'https://exam-results-portal-backend.onrender.com/api/exam-results';
+        const BACKEND_PROXY_URL = 'https://corsproxy.io/?' + encodeURIComponent(BACKEND_DIRECT_URL);
+        
+        // Debug mode - set to true to see detailed logs
+        const DEBUG = true;
+        
+        // Helper function for debugging
+        function debugLog(...args) {
+            if (DEBUG) {
+                console.log(...args);
+            }
+        }
+        
+        async function checkBackendHealth() {
+            try {
+                const healthURL = 'https://exam-results-portal-backend.onrender.com/health';
+                debugLog("Checking backend health at:", healthURL);
+                
+                const response = await fetch(healthURL);
+                
+                if (!response.ok) {
+                    debugLog("Health check failed with status:", response.status);
+                    return false;
+                }
+                
+                const data = await response.json();
+                debugLog("Health check response:", data);
+                return data.status === 'healthy';
+                
+            } catch (error) {
+                debugLog("Health check error:", error);
+                return false;
+            }
+        }
+        
+        async function fetchWithRetry(url, options, retries = 2) {
+            try {
+                debugLog("Fetching from:", url);
+                const response = await fetch(url, options);
+                
+                if (!response.ok) {
+                    debugLog("Fetch failed with status:", response.status);
+                    throw new Error(`HTTP error ${response.status}`);
+                }
+                
+                return response;
+            } catch (error) {
+                debugLog("Fetch error:", error);
+                
+                if (retries <= 0) throw error;
+                
+                // If direct URL failed, try with CORS proxy
+                if (url === BACKEND_DIRECT_URL && retries > 0) {
+                    debugLog("Retrying with CORS proxy");
+                    return fetchWithRetry(BACKEND_PROXY_URL, options, retries - 1);
+                }
+                
+                throw error;
+            }
+        }
 
         async function fetchResult() {
             const rollNumber = document.getElementById('rollNumber').value;
@@ -289,20 +348,37 @@
             resultCard.style.display = 'none';
             errorMessage.style.display = 'none';
             
+            // Show loading indicator
+            errorMessage.textContent = "Loading...";
+            errorMessage.style.display = 'block';
+            
             try {
-                // Show loading indicator
-                errorMessage.textContent = "Loading...";
-                errorMessage.style.display = 'block';
+                // First check if backend is healthy
+                const isHealthy = await checkBackendHealth();
                 
-                // Fetch data from backend proxy
-                const response = await fetch(`${BACKEND_PROXY_URL}?rollNumber=${rollNumber}`);
-                
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
+                if (!isHealthy) {
+                    errorMessage.textContent = "Backend server appears to be offline. Please try again later.";
+                    errorMessage.style.display = 'block';
+                    return;
                 }
                 
+                // Set up fetch options
+                const fetchOptions = {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    mode: 'cors'
+                };
+                
+                // Try to fetch with potential CORS proxy fallback
+                const response = await fetchWithRetry(
+                    `${BACKEND_DIRECT_URL}?rollNumber=${rollNumber}`, 
+                    fetchOptions
+                );
+                
                 const data = await response.json();
-                console.log("API Response:", data); // Debug: Log API response
+                debugLog("API Response:", data);
                 
                 if (data.status === 'success' && data.student) {
                     errorMessage.style.display = 'none';
@@ -316,6 +392,9 @@
                 console.error('Error fetching result:', error);
                 errorMessage.textContent = "Error connecting to the server. Please try again later.";
                 errorMessage.style.display = 'block';
+                
+                // Show detailed error in console
+                debugLog("Detailed error:", error);
             }
         }
 
@@ -338,56 +417,73 @@
         }
         
         function displayResult(data, rollNumber) {
+            debugLog("Displaying result for:", data);
+            
             // Set student info
-            document.getElementById('studentName').textContent = data.name;
+            document.getElementById('studentName').textContent = data.name || 'N/A';
             document.getElementById('studentRoll').textContent = rollNumber;
-            document.getElementById('studentClass').textContent = data.class;
+            document.getElementById('studentClass').textContent = data.class || 'N/A';
             document.getElementById('examYear').textContent = new Date().getFullYear();
             document.getElementById('schoolName').textContent = data.school || 'PM SHRI KENDRIYA VIDYALAYA RAEBARELI';
             document.getElementById('examName').textContent = 'Final Term';
             
-            // Set signature images - using default paths if not provided
-            document.getElementById('examInchargeSignature').src = 'Exam Incharge.png';
-            document.getElementById('principalSignature').src = 'principal/HM-signature.png';
+            try {
+                // Set signature images - using default paths if not provided
+                document.getElementById('examInchargeSignature').src = 'Exam Incharge.png';
+                document.getElementById('principalSignature').src = 'principal/HM-signature.png';
+            } catch (error) {
+                debugLog("Error setting signature images:", error);
+            }
             
             // Clear previous table rows
             const tableBody = document.getElementById('marksTableBody');
             tableBody.innerHTML = '';
             
-            // Add subject rows
-            data.subjects.forEach(subject => {
+            // Add subject rows if exists
+            if (Array.isArray(data.subjects) && data.subjects.length > 0) {
+                data.subjects.forEach(subject => {
+                    const row = document.createElement('tr');
+                    
+                    const nameCell = document.createElement('td');
+                    nameCell.textContent = subject.name || 'N/A';
+                    
+                    const maxMarksCell = document.createElement('td');
+                    maxMarksCell.textContent = subject.maxMarks || '0';
+                    
+                    const obtainedCell = document.createElement('td');
+                    obtainedCell.textContent = subject.obtained || '0';
+                    
+                    const gradeCell = document.createElement('td');
+                    gradeCell.textContent = subject.grade || 'N/A';
+                    gradeCell.className = getGradeClass(subject.grade);
+                    
+                    row.appendChild(nameCell);
+                    row.appendChild(maxMarksCell);
+                    row.appendChild(obtainedCell);
+                    row.appendChild(gradeCell);
+                    
+                    tableBody.appendChild(row);
+                });
+            } else {
+                debugLog("No subjects data found");
                 const row = document.createElement('tr');
-                
-                const nameCell = document.createElement('td');
-                nameCell.textContent = subject.name;
-                
-                const maxMarksCell = document.createElement('td');
-                maxMarksCell.textContent = subject.maxMarks;
-                
-                const obtainedCell = document.createElement('td');
-                obtainedCell.textContent = subject.obtained;
-                
-                const gradeCell = document.createElement('td');
-                gradeCell.textContent = subject.grade;
-                gradeCell.className = getGradeClass(subject.grade);
-                
-                row.appendChild(nameCell);
-                row.appendChild(maxMarksCell);
-                row.appendChild(obtainedCell);
-                row.appendChild(gradeCell);
-                
+                const cell = document.createElement('td');
+                cell.colSpan = 4;
+                cell.textContent = "No subject data available";
+                cell.style.textAlign = "center";
+                row.appendChild(cell);
                 tableBody.appendChild(row);
-            });
+            }
             
             // Set summary information
-            document.getElementById('totalObtained').textContent = data.totalObtained;
-            document.getElementById('totalMax').textContent = data.totalMarks;
-            document.getElementById('percentage').textContent = data.percentage;
-            document.getElementById('cgpa').textContent = data.cgpa;
+            document.getElementById('totalObtained').textContent = data.totalObtained || '0';
+            document.getElementById('totalMax').textContent = data.totalMarks || '0';
+            document.getElementById('percentage').textContent = data.percentage || '0';
+            document.getElementById('cgpa').textContent = data.cgpa || '0';
             
             // Set result
             const resultStatus = document.getElementById('resultStatus');
-            resultStatus.textContent = data.result;
+            resultStatus.textContent = data.result || 'N/A';
             resultStatus.className = data.result === 'PASS' ? 'pass' : 'fail';
         }
         

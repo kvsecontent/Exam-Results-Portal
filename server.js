@@ -8,18 +8,37 @@ const PORT = process.env.PORT || 3000;
 
 // CORS Configuration
 app.use(cors({
-    origin: [
-        'https://kvsecontent.github.io', // GitHub Pages domain (without trailing slash)
-        'http://localhost:5500' // For local testing
-    ],
+    origin: '*', // Allow all origins temporarily to debug
     methods: ['GET'],
     allowedHeaders: ['Content-Type']
 }));
+
+// Added logging middleware
+app.use((req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} from ${req.get('origin') || 'Unknown Origin'}`);
+    next();
+});
+
+// Health Check Endpoint
+app.get('/health', (req, res) => {
+    // Log the request headers for debugging
+    console.log('Health check headers:', req.headers);
+    
+    res.status(200).json({ 
+        status: 'healthy',
+        message: 'Backend is operational',
+        timestamp: new Date().toISOString()
+    });
+});
 
 // Exam Results Endpoint
 app.get('/api/exam-results', async (req, res) => {
     try {
         const rollNumber = req.query.rollNumber;
+        
+        // Log request info for debugging
+        console.log(`Fetching results for roll number: ${rollNumber}`);
+        console.log('Request headers:', req.headers);
         
         if (!rollNumber) {
             return res.status(400).json({
@@ -29,6 +48,7 @@ app.get('/api/exam-results', async (req, res) => {
         }
 
         // Google Sheets API request
+        console.log('Fetching from Google Sheets...');
         const response = await axios.get(`https://sheets.googleapis.com/v4/spreadsheets/${process.env.GOOGLE_SHEET_ID}/values/Sheet1!A1:Z100`, {
             params: {
                 key: process.env.GOOGLE_SHEETS_API_KEY
@@ -37,7 +57,19 @@ app.get('/api/exam-results', async (req, res) => {
 
         // Process and sanitize data
         const rawData = response.data.values || [];
+        console.log(`Raw data has ${rawData.length} rows`);
+        
+        if (rawData.length <= 1) {
+            console.warn('Google Sheet has no data or only headers');
+            return res.status(500).json({
+                status: 'error',
+                message: 'No data found in the Google Sheet'
+            });
+        }
+        
         const headers = rawData[0] || [];
+        console.log('Sheet headers:', headers);
+        
         const results = rawData.slice(1).map(row => 
             headers.reduce((obj, header, index) => {
                 obj[header] = row[index] || '';
@@ -46,15 +78,19 @@ app.get('/api/exam-results', async (req, res) => {
         );
 
         // Find student by roll number
-        const student = results.find(result => result.rollNumber === rollNumber);
+        console.log(`Searching for student with roll number: ${rollNumber}`);
+        const student = results.find(result => String(result.rollNumber).trim() === String(rollNumber).trim());
 
         if (!student) {
+            console.log(`No student found with roll number: ${rollNumber}`);
             return res.json({
                 status: 'error',
                 message: 'Student not found'
             });
         }
 
+        console.log(`Found student: ${student.name || 'Unknown'}`);
+        
         // Format student data to match frontend expectations
         const formattedStudent = {
             name: student.name || '',
@@ -73,6 +109,8 @@ app.get('/api/exam-results', async (req, res) => {
             key.includes('subject') || key.includes('Subject')
         );
 
+        console.log('Found subject keys:', subjectKeys);
+        
         let totalObtained = 0;
         let totalMaxMarks = 0;
 
@@ -86,6 +124,8 @@ app.get('/api/exam-results', async (req, res) => {
                 const subjectName = student[subjectNameKey];
                 const obtainedMarks = parseInt(student[subjectMarksKey]) || 0;
                 const maxMarks = parseInt(student[maxMarksKey] || '100');
+                
+                console.log(`Subject: ${subjectName}, Marks: ${obtainedMarks}/${maxMarks}`);
                 
                 // Calculate grade
                 const percentage = (obtainedMarks / maxMarks) * 100;
@@ -119,7 +159,10 @@ app.get('/api/exam-results', async (req, res) => {
             formattedStudent.result = overallPercentage >= 33 ? 'PASS' : 'FAIL';
         }
 
-        // Send formatted student data
+        console.log('Sending response with student data');
+        
+        // Send formatted student data with CORS headers
+        res.header('Access-Control-Allow-Origin', '*');
         res.json({
             status: 'success',
             student: formattedStudent
@@ -127,19 +170,21 @@ app.get('/api/exam-results', async (req, res) => {
 
     } catch (error) {
         console.error('Error fetching exam results:', error.response ? error.response.data : error.message);
+        if (error.stack) {
+            console.error('Stack trace:', error.stack);
+        }
+        
         res.status(500).json({
             status: 'error',
-            message: 'Unable to fetch exam results'
+            message: 'Unable to fetch exam results',
+            details: process.env.NODE_ENV === 'development' ? (error.message || 'Unknown error') : undefined
         });
     }
-});
-
-// Health Check Endpoint
-app.get('/health', (req, res) => {
-    res.status(200).json({ status: 'healthy' });
 });
 
 // Start Server
 app.listen(PORT, () => {
     console.log(`Backend proxy server running on port ${PORT}`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'production'}`);
+    console.log(`CORS: Allowing all origins temporarily for debugging`);
 });
